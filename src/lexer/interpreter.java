@@ -1,12 +1,15 @@
 package lexer;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
 
 	final Environment globals = new Environment();
 	private Environment environment = globals;
+	private final Map<Expr, Integer> locals = new HashMap<>();
 
 	void interpret(List<Stmt> statements) {
 		try {
@@ -19,39 +22,113 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
 	}
 
 	@Override
-	public Object visitLiteralExpr(Expr.Literal expr) {
-		return expr.value;
+	public Void visitBlockStmt(Stmt.Block stmt) {
+		executeBlock(stmt.statements, new Environment(environment));
+		return null;
 	}
 
 	@Override
-	public Object visitLogicalExpr(Expr.Logical expr) {
-		Object left = evaluate(expr.left);
+	public Void visitClassStmt(Stmt.Class stmt) {
+		Object superclass = null;
+		if (stmt.superclass != null) {
+			superclass = evaluate(stmt.superclass);
+			if (!(superclass instanceof RoTalClass)) {
+				throw new RuntimeError(stmt.superclass.name,
+						"Superclass must be a class.");
+			}
+		}
+		environment.define(stmt.name.lexeme, null);
 
-		if (expr.operator.type == TokenType.OR) {
-			if (isTruthy(left)) return left;
-		} else {
-			if (!isTruthy(left)) return left;
+		if (stmt.superclass != null) {
+			environment = new Environment(environment);
+			environment.define("super", superclass);
 		}
 
-		return evaluate(expr.right);
+		Map<String, RoTalFunction> methods = new HashMap<>();
+		for (Stmt.Function method : stmt.methods) {
+			RoTalFunction function = new RoTalFunction(method, environment,
+					method.name.lexeme.equals("init"));
+			methods.put(method.name.lexeme, function);
+		}
+		RoTalClass klass = new RoTalClass(stmt.name.lexeme,
+				(RoTalClass)superclass, methods);
+
+		if (superclass != null) {
+			environment = environment.enclosing;
+		}
+
+		environment.assign(stmt.name, klass);
+		return null;
 	}
 
 	@Override
-	public Object visitGroupingExpr(Expr.Grouping expr) {
-		return evaluate(expr.expression);
+	public Void visitExpressionStmt(Stmt.Expression stmt) {
+		evaluate(stmt.expression);
+		return null;
 	}
 
 	@Override
-	public Object visitUnaryExpr(Expr.Unary expr) {
-		Object right = evaluate(expr.right);
+	public Void visitFunctionStmt(Stmt.Function stmt) {
+		RoTalFunction function = new RoTalFunction(stmt, environment,
+				false);
+		environment.define(stmt.name.lexeme, function);
+		return null;
+	}
 
-		return switch (expr.operator.type) {
-			case BANG -> !isTruthy(right);
-			case MINUS -> -(double) right;
-			default -> null;
-		};
+	@Override
+	public Void visitIfStmt(Stmt.If stmt) {
+		if (isTruthy(evaluate(stmt.condition))) {
+			execute(stmt.thenBranch);
+		} else if (stmt.elseBranch != null) {
+			execute(stmt.elseBranch);
+		}
+		return null;
+	}
 
-		// Unreachable
+	@Override
+	public Void visitPrintStmt(Stmt.Print stmt) {
+		Object value = evaluate(stmt.expression);
+		System.out.println(stringify(value));
+		return null;
+	}
+
+	@Override
+	public Void visitReturnStmt(Stmt.Return stmt) {
+		Object value = null;
+		if (stmt.value != null) value = evaluate(stmt.value);
+
+		throw new Return(value);
+	}
+
+	@Override
+	public Void visitVarStmt(Stmt.Var stmt) {
+		Object value = null;
+		if (stmt.initializer != null) {
+			value = evaluate(stmt.initializer);
+		}
+
+		environment.define(stmt.name.lexeme, value);
+		return null;
+	}
+
+	@Override
+	public Void visitWhileStmt(Stmt.While stmt) {
+		while (isTruthy(evaluate(stmt.condition))) {
+			execute(stmt.body);
+		}
+		return null;
+	}
+
+	@Override
+	public Object visitAssignExpr(Expr.Assign expr) {
+		Object value = evaluate(expr.value);
+		Integer distance = locals.get(expr);
+		if (distance != null) {
+			environment.assignAt(distance, expr.name, value);
+		} else {
+			globals.assign(expr.name, value);
+		}
+		return value;
 	}
 
 	@Override
@@ -126,6 +203,101 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
 		return function.call(this, arguments);
 	}
 
+	@Override
+	public Object visitGetExpr(Expr.Get expr) {
+		Object object = evaluate(expr.object);
+		if (object instanceof RoTalInstance) {
+			return ((RoTalInstance) object).get(expr.name);
+		}
+
+		throw new RuntimeError(expr.name,
+				"Only instances have properties.");
+	}
+
+	@Override
+	public Object visitLiteralExpr(Expr.Literal expr) {
+		return expr.value;
+	}
+
+	@Override
+	public Object visitLogicalExpr(Expr.Logical expr) {
+		Object left = evaluate(expr.left);
+
+		if (expr.operator.type == TokenType.OR) {
+			if (isTruthy(left)) return left;
+		} else {
+			if (!isTruthy(left)) return left;
+		}
+
+		return evaluate(expr.right);
+	}
+
+	@Override
+	public Object visitSetExpr(Expr.Set expr) {
+		Object object = evaluate(expr.object);
+
+		if (!(object instanceof RoTalInstance)) {
+			throw new RuntimeError(expr.name,
+					"Only instances have fields.");
+		}
+
+		Object value = evaluate(expr.value);
+		((RoTalInstance)object).set(expr.name, value);
+		return value;
+	}
+
+	@Override
+	public Object visitSuperExpr(Expr.Super expr) {
+		int distance = locals.get(expr);
+		RoTalClass superclass = (RoTalClass)environment.getAt(
+				distance, "super");
+		RoTalInstance object = (RoTalInstance)environment.getAt(
+				distance - 1, "self");
+		RoTalFunction method = superclass.findMethod(expr.method.lexeme);
+		if (method == null) {
+			throw new RuntimeError(expr.method,
+					"Undefined property '" + expr.method.lexeme + "'.");
+		}
+		return method.bind(object);
+	}
+
+	@Override
+	public Object visitSelfExpr(Expr.Self expr) {
+		return lookUpVariable(expr.keyword, expr);
+	}
+
+	@Override
+	public Object visitUnaryExpr(Expr.Unary expr) {
+		Object right = evaluate(expr.right);
+
+		return switch (expr.operator.type) {
+			case BANG -> !isTruthy(right);
+			case MINUS -> -(double) right;
+			default -> null;
+		};
+
+		// Unreachable
+	}
+
+	@Override
+	public Object visitVariableExpr(Expr.Variable expr) {
+		return lookUpVariable(expr.name, expr);
+	}
+
+	private Object lookUpVariable(Token name, Expr expr) {
+		Integer distance = locals.get(expr);
+		if (distance != null) {
+			return environment.getAt(distance, name.lexeme);
+		} else {
+			return globals.get(name);
+		}
+	}
+
+	@Override
+	public Object visitGroupingExpr(Expr.Grouping expr) {
+		return evaluate(expr.expression);
+	}
+
 	private Object evaluate(Expr expr) {
 		return expr.accept(this);
 	}
@@ -134,10 +306,8 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
 		stmt.accept(this);
 	}
 
-	@Override
-	public Void visitBlockStmt(Stmt.Block stmt) {
-		executeBlock(stmt.statements, new Environment(environment));
-		return null;
+	void resolve(Expr expr, int depth) {
+		locals.put(expr, depth);
 	}
 
 	void executeBlock(List<Stmt> statements, Environment environment) {
@@ -151,60 +321,6 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
 		} finally {
 			this.environment = previous;
 		}
-	}
-
-	@Override
-	public Void visitExpressionStmt(Stmt.Expression stmt) {
-		evaluate(stmt.expression);
-		return null;
-	}
-
-	@Override
-	public Void visitIfStmt(Stmt.If stmt) {
-		if (isTruthy(evaluate(stmt.condition))) {
-			execute(stmt.thenBranch);
-		} else if (stmt.elseBranch != null) {
-			execute(stmt.elseBranch);
-		}
-		return null;
-	}
-
-	@Override
-	public Void visitPrintStmt(Stmt.Print stmt) {
-		Object value = evaluate(stmt.expression);
-		System.out.println(stringify(value));
-		return null;
-	}
-
-	@Override
-	public Void visitVarStmt(Stmt.Var stmt) {
-		Object value = null;
-		if (stmt.initializer != null) {
-			value = evaluate(stmt.initializer);
-		}
-
-		environment.define(stmt.name.lexeme, value);
-		return null;
-	}
-
-	@Override
-	public Void visitWhileStmt(Stmt.While stmt) {
-		while (isTruthy(evaluate(stmt.condition))) {
-			execute(stmt.body);
-		}
-		return null;
-	}
-
-	@Override
-	public Object visitAssignExpr(Expr.Assign expr) {
-		Object value = evaluate(expr.value);
-		environment.assign(expr.name, value);
-		return value;
-	}
-
-	@Override
-	public Object visitVariableExpr(Expr.Variable expr) {
-		return environment.get(expr.name);
 	}
 
 	private boolean isTruthy(Object object) {

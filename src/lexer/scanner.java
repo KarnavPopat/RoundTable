@@ -25,13 +25,14 @@ class Scanner {
 		keywords.put("false",  FALSE);
 		keywords.put("for",    FOR);
 		keywords.put("fun",    FUN);
+		keywords.put("extends",EXTENDS);
 		keywords.put("if",     IF);
 		keywords.put("nil",    NIL);
 		keywords.put("or",     OR);
 		keywords.put("print",  PRINT);
 		keywords.put("return", RETURN);
 		keywords.put("super",  SUPER);
-		keywords.put("this",   THIS);
+		keywords.put("self",   SELF);
 		keywords.put("true",   TRUE);
 		keywords.put("let",    LET);
 		keywords.put("while",  WHILE);
