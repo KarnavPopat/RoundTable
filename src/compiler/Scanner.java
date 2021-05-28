@@ -1,11 +1,11 @@
-package lexer;
+package compiler;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static lexer.TokenType.*;
+import static compiler.TokenType.*;
 
 class Scanner {
 	private final String source;

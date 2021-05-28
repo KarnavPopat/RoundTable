@@ -1,10 +1,10 @@
-package lexer;
+package compiler;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import static lexer.TokenType.*;
+import static compiler.TokenType.*;
 
 class Parser {
 

@@ -1,4 +1,4 @@
-package lexer;
+package compiler;
 
 class Return extends RuntimeException {
 	final Object value;

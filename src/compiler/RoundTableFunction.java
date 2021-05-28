@@ -1,24 +1,24 @@
-package lexer;
+package compiler;
 
 import java.util.List;
 
-class RoTalFunction implements RoTalCallable {
+class RoundTableFunction implements RoundTableCallable {
 	private final Stmt.Function declaration;
 	private final Environment closure;
 
 	private final boolean isInitializer;
 
-	RoTalFunction(Stmt.Function declaration, Environment closure,
+	RoundTableFunction(Stmt.Function declaration, Environment closure,
 	              boolean isInitializer) {
 		this.isInitializer = isInitializer;
 		this.closure = closure;
 		this.declaration = declaration;
 	}
 
-	RoTalFunction bind(RoTalInstance instance) {
+	RoundTableFunction bind(RoundTableInstance instance) {
 		Environment environment = new Environment(closure);
 		environment.define("self", instance);
-		return new RoTalFunction(declaration, environment,
+		return new RoundTableFunction(declaration, environment,
 					isInitializer);
 	}
 

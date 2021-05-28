@@ -1,13 +1,13 @@
-package lexer;
+package compiler;
 
 import java.util.HashMap;
 import java.util.Map;
 
-class RoTalInstance {
-	private RoTalClass klass;
+class RoundTableInstance {
+	private RoundTableClass klass;
 	private final Map<String, Object> fields = new HashMap<>();
 
-	RoTalInstance(RoTalClass klass) {
+	RoundTableInstance(RoundTableClass klass) {
 		this.klass = klass;
 	}
 
@@ -16,7 +16,7 @@ class RoTalInstance {
 			return fields.get(name.lexeme);
 		}
 
-		RoTalFunction method = klass.findMethod(name.lexeme);
+		RoundTableFunction method = klass.findMethod(name.lexeme);
 		if (method != null) return method;
 
 		throw new RuntimeError(name,

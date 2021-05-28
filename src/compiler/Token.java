@@ -1,4 +1,4 @@
-package lexer;
+package compiler;
 
 class Token {
 	final TokenType type;

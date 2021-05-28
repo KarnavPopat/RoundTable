@@ -1,4 +1,4 @@
-package lexer;
+package compiler;
 
 enum TokenType {
 	// Single-character tokens.

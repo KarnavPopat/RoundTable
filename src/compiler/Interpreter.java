@@ -1,4 +1,4 @@
-package lexer;
+package compiler;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -32,7 +32,7 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
 		Object superclass = null;
 		if (stmt.superclass != null) {
 			superclass = evaluate(stmt.superclass);
-			if (!(superclass instanceof RoTalClass)) {
+			if (!(superclass instanceof RoundTableClass)) {
 				throw new RuntimeError(stmt.superclass.name,
 						"Superclass must be a class.");
 			}
@@ -44,14 +44,14 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
 			environment.define("super", superclass);
 		}
 
-		Map<String, RoTalFunction> methods = new HashMap<>();
+		Map<String, RoundTableFunction> methods = new HashMap<>();
 		for (Stmt.Function method : stmt.methods) {
-			RoTalFunction function = new RoTalFunction(method, environment,
+			RoundTableFunction function = new RoundTableFunction(method, environment,
 					method.name.lexeme.equals("init"));
 			methods.put(method.name.lexeme, function);
 		}
-		RoTalClass klass = new RoTalClass(stmt.name.lexeme,
-				(RoTalClass)superclass, methods);
+		RoundTableClass klass = new RoundTableClass(stmt.name.lexeme,
+				(RoundTableClass)superclass, methods);
 
 		if (superclass != null) {
 			environment = environment.enclosing;
@@ -69,7 +69,7 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
 
 	@Override
 	public Void visitFunctionStmt(Stmt.Function stmt) {
-		RoTalFunction function = new RoTalFunction(stmt, environment,
+		RoundTableFunction function = new RoundTableFunction(stmt, environment,
 				false);
 		environment.define(stmt.name.lexeme, function);
 		return null;
@@ -209,12 +209,12 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
 			arguments.add(evaluate(argument));
 		}
 
-		if (!(callee instanceof RoTalCallable)) {
+		if (!(callee instanceof RoundTableCallable)) {
 			throw new RuntimeError(expr.paren,
 					"Can only call functions and classes.");
 		}
 
-		RoTalCallable function = (RoTalCallable)callee;
+		RoundTableCallable function = (RoundTableCallable)callee;
 		if (arguments.size() != function.arity()) {
 			throw new RuntimeError(expr.paren, "Expected " +
 					function.arity() + " arguments but got " +
@@ -226,8 +226,8 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
 	@Override
 	public Object visitGetExpr(Expr.Get expr) {
 		Object object = evaluate(expr.object);
-		if (object instanceof RoTalInstance) {
-			return ((RoTalInstance) object).get(expr.name);
+		if (object instanceof RoundTableInstance) {
+			return ((RoundTableInstance) object).get(expr.name);
 		}
 
 		throw new RuntimeError(expr.name,
@@ -256,13 +256,13 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
 	public Object visitSetExpr(Expr.Set expr) {
 		Object object = evaluate(expr.object);
 
-		if (!(object instanceof RoTalInstance)) {
+		if (!(object instanceof RoundTableInstance)) {
 			throw new RuntimeError(expr.name,
 					"Only instances have fields.");
 		}
 
 		Object value = evaluate(expr.value);
-		((RoTalInstance)object).set(expr.name, value);
+		((RoundTableInstance)object).set(expr.name, value);
 		return value;
 	}
 
@@ -270,12 +270,12 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
 	public Object visitSuperExpr(Expr.Super expr) {
 		int distance = locals.get(expr);
 		System.out.println(environment.getAt(0, "this"));
-		RoTalClass superclass = (RoTalClass) environment.getAt(
+		RoundTableClass superclass = (RoundTableClass) environment.getAt(
 				distance-1, "super");
-		RoTalInstance object = (RoTalInstance) environment.getAt(
+		RoundTableInstance object = (RoundTableInstance) environment.getAt(
 				(distance-2), "self");
 		System.out.println("hit visit super");
-		RoTalFunction method = superclass.findMethod(expr.method.lexeme);
+		RoundTableFunction method = superclass.findMethod(expr.method.lexeme);
 		if (method == null) {
 			throw new RuntimeError(expr.method,
 					"Undefined property '" + expr.method.lexeme + "'.");
@@ -385,7 +385,7 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
 	}
 
 	Interpreter() {
-		globals.define("clock", new RoTalCallable() {
+		globals.define("clock", new RoundTableCallable() {
 			@Override
 			public int arity() {
 				return 0;
@@ -403,7 +403,7 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
 			}
 		});
 
-		globals.define("print", new RoTalCallable() {
+		globals.define("print", new RoundTableCallable() {
 			@Override
 			public int arity() {
 				return 2;

@@ -1,4 +1,4 @@
-package lexer;
+package compiler;
 
 class RuntimeError extends RuntimeException {
 	final Token token;

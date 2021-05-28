@@ -1,8 +1,8 @@
-package lexer;
+package compiler;
 
 import java.util.List;
 
-interface RoTalCallable {
+interface RoundTableCallable {
 	int arity();
 	Object call(Interpreter interpreter, List<Object> arguments);
 }
