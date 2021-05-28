@@ -9,8 +9,8 @@ import static lexer.TokenType.*;
 
 class Scanner {
 	private final String source;
-
 	private final List<Token> tokens = new ArrayList<>();
+
 	private int start = 0;
 	private int current = 0;
 	private int line = 1;
@@ -65,6 +65,7 @@ class Scanner {
 			case '+': addToken(PLUS); break;
 			case ';': addToken(SEMICOLON); break;
 			case '*': addToken(STAR); break;
+			case '%': addToken(MODULO); break;
 
 			case '!':
 				addToken(match('=') ? BANG_EQUAL : BANG);
@@ -81,7 +82,10 @@ class Scanner {
 
 			case '/':
 				if (match('/')) {
-					while (peek() != '\n' && !isAtEnd()) { advance(); }
+					while (peek() != '\n' && !isAtEnd()) {
+						advance();
+					}
+
 				} else if (match('*')) {
 
 					while (peek() != '*' && peekNext() != '/' && !isAtEnd()) {
@@ -97,7 +101,9 @@ class Scanner {
 				}
 				break;
 
-			case '"': string(); break;
+			case '"':
+			case '\'':
+				string(c); break;
 
 			case ' ':
 			case '\r':
@@ -152,15 +158,15 @@ class Scanner {
 	}
 
 	private boolean match(char expected) {
-		if (isAtEnd()) {return false;}
-		if (source.charAt(current) != expected) {return false;}
+		if (isAtEnd()) { return false; }
+		if (source.charAt(current) != expected) { return false; }
 
 		current++;
 		return true;
 	}
 
 	private char peek() {
-		if (isAtEnd()) {return '\0';}
+		if (isAtEnd()) { return '\0'; }
 		return source.charAt(current);
 	}
 
@@ -169,9 +175,9 @@ class Scanner {
 		return source.charAt(current + 1);
 	}
 
-	private void string() {
-		while (peek() != '"' && !isAtEnd()) {
-			if (peek() == '\n') line++;
+	private void string(char stringMarker) {
+		while (peek() != stringMarker && !isAtEnd()) {
+			if (peek() == '\n') { line++; }
 			advance();
 		}
 
@@ -180,7 +186,7 @@ class Scanner {
 			return;
 		}
 
-		// The closing ".
+		// The closing "
 		advance();
 
 		// Trim the surrounding quotes.

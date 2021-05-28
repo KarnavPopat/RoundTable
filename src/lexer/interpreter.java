@@ -162,15 +162,35 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
 				if (left instanceof Double && right instanceof Double) {
 					return (double)left + (double)right;
 				}
-				if (left instanceof String && right instanceof String) {
-					return (String)left + (String)right;
+				if (left instanceof String) {
+					return left + "" + right;
 				}
+				if (left instanceof Double && right instanceof String) {
+					try {
+						return (double) left + Double.parseDouble(String.valueOf(right));
+					} catch (Exception e) {
+						throw new RuntimeError(expr.operator,
+								"String " + right + " cannot be implicitly converted to number.");
+					}
+				}
+
 				throw new RuntimeError(expr.operator,
-						"Operands must be two numbers or two strings.");
+						"Operands must be compatible numbers or strings.");
 
 			case SLASH:
 				checkNumberOperands(expr.operator, left, right);
+				if ((double)right == 0) {
+					throw new RuntimeError(expr.operator,
+							"Cannot divide by zero.");
+				}
 				return (double)left / (double)right;
+			case MODULO:
+				checkNumberOperands(expr.operator, left, right);
+				if ((double)right == 0) {
+					throw new RuntimeError(expr.operator,
+							"Cannot divide by zero.");
+				}
+				return (double)left % (double)right;
 			case STAR:
 				checkNumberOperands(expr.operator, left, right);
 				return (double)left * (double)right;
@@ -249,10 +269,12 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
 	@Override
 	public Object visitSuperExpr(Expr.Super expr) {
 		int distance = locals.get(expr);
-		RoTalClass superclass = (RoTalClass)environment.getAt(
-				distance, "super");
-		RoTalInstance object = (RoTalInstance)environment.getAt(
-				distance - 1, "self");
+		System.out.println(environment.getAt(0, "this"));
+		RoTalClass superclass = (RoTalClass) environment.getAt(
+				distance-1, "super");
+		RoTalInstance object = (RoTalInstance) environment.getAt(
+				(distance-2), "self");
+		System.out.println("hit visit super");
 		RoTalFunction method = superclass.findMethod(expr.method.lexeme);
 		if (method == null) {
 			throw new RuntimeError(expr.method,
@@ -384,13 +406,15 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
 		globals.define("print", new RoTalCallable() {
 			@Override
 			public int arity() {
-				return 1;
+				return 2;
 			}
 
 			@Override
 			public Object call(Interpreter interpreter,
 			                   List<Object> arguments) {
-				System.out.println(arguments.get(0));
+				for (Object argument : arguments) {
+					System.out.println(argument);
+				}
 				return arguments;
 			}
 

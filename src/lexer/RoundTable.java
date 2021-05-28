@@ -12,10 +12,14 @@ import java.util.List;
     erroneous lines, tracebacks, line positions, and the type of error */
 /* TODO: create a separate error_reporter class or interface
     to handle errors */
-/* TODO: allow nested comments */
-/* TODO: get rid of semicolons for line enders */
 /* TODO: turn print statement into print function */
 /* TODO: implement ternary operators */
+/* TODO: allow hexadec, oct, and sci notation numbers */
+/* TODO: implement a for each loop */
+/* TODO: implement lambda & anonymous functions */
+/* TODO: implement do while loops */
+/* TODO: string operations */
+/* TODO: implement file I/O */
 
 public class RoundTable {
 
@@ -24,23 +28,16 @@ public class RoundTable {
 	static boolean hadError = false;
 	static boolean hadRuntimeError = false;
 
-	private static void run(String source) {
-		Scanner scanner = new Scanner(source);
-		List<Token> tokens = scanner.scanTokens();
+	public static void main(String[] args) throws IOException {
 
-		Parser parser = new Parser(tokens);
-		List<Stmt> statements = parser.parse();
-
-		// Stop if there was a syntax error.
-		if (hadError) return;
-
-		Resolver resolver = new Resolver(interpreter);
-		resolver.resolve(statements);
-
-		// Stop if there was a resolution error.
-		if (hadError) return;
-
-		interpreter.interpret(statements);
+		if (args.length > 1) {
+			System.out.println("Usage: roundtable [script]");
+			System.exit(64);
+		} else if (args.length == 1) {
+			runFile(args[0]);
+		} else {
+			runPrompt();
+		}
 	}
 
 	private static void runFile(String path) throws IOException {
@@ -67,6 +64,30 @@ public class RoundTable {
 		}
 	}
 
+	private static void run(String source) {
+
+		// Scan the source code into tokens with the scanner
+		Scanner scanner = new Scanner(source);
+		List<Token> tokens = scanner.scanTokens();
+
+		// Parse and compile the source code with the parser
+		Parser parser = new Parser(tokens);
+		List<Stmt> statements = parser.parse();
+
+		// Stop if there was a syntax error.
+		if (hadError) return;
+
+		// Resolve errors with the resolver
+		Resolver resolver = new Resolver(interpreter);
+		resolver.resolve(statements);
+
+		// Stop if there was a resolution error.
+		if (hadError) return;
+
+		// Interpret the code with the interpreter (at runtime)
+		interpreter.interpret(statements);
+	}
+
 	private static void report(int line, String where, String message) {
 		System.err.println(
 				"[line " + line + "] Error" + where + ": " + message);
@@ -89,16 +110,5 @@ public class RoundTable {
 		System.err.println(error.getMessage() +
 				"\n[line " + error.token.line + "]");
 		hadRuntimeError = true;
-	}
-
-	public static void main(String[] args) throws IOException {
-		if (args.length > 1) {
-			System.out.println("Usage: rotal");
-			System.exit(64);
-		} else if (args.length == 1) {
-			runFile(args[0]);
-		} else {
-			runPrompt();
-		}
 	}
 }

@@ -30,6 +30,96 @@ class Parser {
 		return assignment();
 	}
 
+	private Expr equality() {
+		Expr expr = comparison();
+
+		while (match(BANG_EQUAL, EQUAL_EQUAL)) {
+			Token operator = previous();
+			Expr right = comparison();
+			expr = new Expr.Binary(expr, operator, right);
+		}
+
+		return expr;
+	}
+
+	private Expr comparison() {
+		Expr expr = term();
+
+		while (match(GREATER, GREATER_EQUAL, LESS, LESS_EQUAL)) {
+			Token operator = previous();
+			Expr right = term();
+			expr = new Expr.Binary(expr, operator, right);
+		}
+
+		return expr;
+	}
+
+	private Expr term() {
+		Expr expr = factor();
+
+		while (match(MINUS, PLUS)) {
+			Token operator = previous();
+			Expr right = factor();
+			expr = new Expr.Binary(expr, operator, right);
+		}
+
+		return expr;
+	}
+
+	private Expr factor() {
+		Expr expr = unary();
+
+		while (match(SLASH, STAR, MODULO)) {
+			Token operator = previous();
+			Expr right = unary();
+			expr = new Expr.Binary(expr, operator, right);
+		}
+
+		return expr;
+	}
+
+	private Expr unary() {
+		if (match(BANG, MINUS)) {
+			Token operator = previous();
+			Expr right = unary();
+			return new Expr.Unary(operator, right);
+		}
+
+		return call();
+	}
+
+	private Expr primary() {
+		if (match(FALSE)) return new Expr.Literal(false);
+		if (match(TRUE)) return new Expr.Literal(true);
+		if (match(NIL)) return new Expr.Literal(null);
+
+		if (match(NUMBER, STRING)) {
+			return new Expr.Literal(previous().literal);
+		}
+
+		if (match(SUPER)) {
+			Token keyword = previous();
+			consume(DOT, "Expect '.' after 'super'.");
+			Token method = consume(IDENTIFIER,
+					"Expect superclass method name.");
+			return new Expr.Super(keyword, method);
+		}
+
+		if (match(SELF)) return new Expr.Self(previous());
+
+		if (match(IDENTIFIER)) {
+			return new Expr.Variable(previous());
+		}
+
+		if (match(LEFT_PAR)) {
+			Expr expr = expression();
+			consume(RIGHT_PAR, "Expect ')' after expression.");
+			return new Expr.Grouping(expr);
+		}
+
+		throw error(peek(), "Expect expression.");
+	}
+
 	private Stmt declaration() {
 		try {
 			if (match(FUN)) return function("function");
@@ -44,8 +134,10 @@ class Parser {
 
 	private Stmt classDeclaration() {
 		Token name = consume(IDENTIFIER, "Expect class name.");
+
 		Expr.Variable superclass = null;
 		if (match(EXTENDS)) {
+			System.out.println("matched extends");
 			consume(IDENTIFIER, "Expect superclass name.");
 			superclass = new Expr.Variable(previous());
 		}
@@ -129,6 +221,7 @@ class Parser {
 
 		return new Stmt.If(condition, thenBranch, elseBranch);
 	}
+
 
 	private Stmt printStatement() {
 		Expr value = expression();
@@ -250,64 +343,6 @@ class Parser {
 		return expr;
 	}
 
-	private Expr equality() {
-		Expr expr = comparison();
-
-		while (match(BANG_EQUAL, EQUAL_EQUAL)) {
-			Token operator = previous();
-			Expr right = comparison();
-			expr = new Expr.Binary(expr, operator, right);
-		}
-
-		return expr;
-	}
-
-	private Expr comparison() {
-		Expr expr = term();
-
-		while (match(GREATER, GREATER_EQUAL, LESS, LESS_EQUAL)) {
-			Token operator = previous();
-			Expr right = term();
-			expr = new Expr.Binary(expr, operator, right);
-		}
-
-		return expr;
-	}
-
-	private Expr term() {
-		Expr expr = factor();
-
-		while (match(MINUS, PLUS)) {
-			Token operator = previous();
-			Expr right = factor();
-			expr = new Expr.Binary(expr, operator, right);
-		}
-
-		return expr;
-	}
-
-	private Expr factor() {
-		Expr expr = unary();
-
-		while (match(SLASH, STAR)) {
-			Token operator = previous();
-			Expr right = unary();
-			expr = new Expr.Binary(expr, operator, right);
-		}
-
-		return expr;
-	}
-
-	private Expr unary() {
-		if (match(BANG, MINUS)) {
-			Token operator = previous();
-			Expr right = unary();
-			return new Expr.Unary(operator, right);
-		}
-
-		return call();
-	}
-
 	private Expr call() {
 		Expr expr = primary();
 
@@ -341,38 +376,6 @@ class Parser {
 				"Expect ')' after arguments.");
 
 		return new Expr.Call(callee, paren, arguments);
-	}
-
-	private Expr primary() {
-		if (match(FALSE)) return new Expr.Literal(false);
-		if (match(TRUE)) return new Expr.Literal(true);
-		if (match(NIL)) return new Expr.Literal(null);
-
-		if (match(NUMBER, STRING)) {
-			return new Expr.Literal(previous().literal);
-		}
-
-		if (match(SUPER)) {
-			Token keyword = previous();
-			consume(DOT, "Expect '.' after 'super'.");
-			Token method = consume(IDENTIFIER,
-					"Expect superclass method name.");
-			return new Expr.Super(keyword, method);
-		}
-
-		if (match(SELF)) return new Expr.Self(previous());
-
-		if (match(IDENTIFIER)) {
-			return new Expr.Variable(previous());
-		}
-
-		if (match(LEFT_PAR)) {
-			Expr expr = expression();
-			consume(RIGHT_PAR, "Expect ')' after expression.");
-			return new Expr.Grouping(expr);
-		}
-
-		throw error(peek(), "Expect expression.");
 	}
 
 	private boolean match(TokenType... types) {
@@ -424,7 +427,7 @@ class Parser {
 		advance();
 
 		while (!isAtEnd()) {
-			if (previous().type == SEMICOLON) return;
+			if (previous().type == SEMICOLON) { return; }
 
 			switch (peek().type) {
 				case CLASS:
