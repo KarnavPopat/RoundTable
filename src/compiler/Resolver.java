@@ -47,7 +47,7 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
 
 		if (stmt.superclass != null &&
 				stmt.name.lexeme.equals(stmt.superclass.name.lexeme)) {
-			RoundTable.error(stmt.superclass.name,
+			ErrorHandler.error(stmt.superclass.name,
 					"A class can't inherit from itself.");
 		}
 
@@ -103,20 +103,14 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
 	}
 
 	@Override
-	public Void visitPrintStmt(Stmt.Print stmt) {
-		resolve(stmt.expression);
-		return null;
-	}
-
-	@Override
 	public Void visitReturnStmt(Stmt.Return stmt) {
 		if (currentFunction == FunctionType.NONE) {
-			RoundTable.error(stmt.keyword, "Can't return from top-level code.");
+			ErrorHandler.error(stmt.keyword, "Can't return from top-level code.");
 		}
 
 		if (stmt.value != null) {
 			if (currentFunction == FunctionType.INITIALIZER) {
-				RoundTable.error(stmt.keyword,
+				ErrorHandler.error(stmt.keyword,
 						"Can't return a value from an initializer.");
 			}
 			resolve(stmt.value);
@@ -201,10 +195,10 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
 	@Override
 	public Void visitSuperExpr(Expr.Super expr) {
 		if (currentClass == ClassType.NONE) {
-			RoundTable.error(expr.keyword,
+			ErrorHandler.error(expr.keyword,
 					"Can't use 'super' outside of a class.");
 		} else if (currentClass != ClassType.SUBCLASS) {
-			RoundTable.error(expr.keyword,
+			ErrorHandler.error(expr.keyword,
 					"Can't use 'super' in a class with no superclass.");
 		}
 
@@ -215,7 +209,7 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
 	@Override
 	public Void visitSelfExpr(Expr.Self expr) {
 		if (currentClass == ClassType.NONE) {
-			RoundTable.error(expr.keyword,
+			ErrorHandler.error(expr.keyword,
 					"Can't use 'this' outside of a class.");
 			return null;
 		}
@@ -234,7 +228,7 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
 	public Void visitVariableExpr(Expr.Variable expr) {
 		if (!scopes.isEmpty() &&
 				scopes.peek().get(expr.name.lexeme) == Boolean.FALSE) {
-			RoundTable.error(expr.name,
+			ErrorHandler.error(expr.name,
 					"Can't read local variable in its own initializer.");
 		}
 
@@ -269,7 +263,7 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
 
 		Map<String, Boolean> scope = scopes.peek();
 		if (scope.containsKey(name.lexeme)) {
-			RoundTable.error(name,
+			ErrorHandler.error(name,
 					"Already variable with this name in this scope.");
 		}
 		scope.put(name.lexeme, false);

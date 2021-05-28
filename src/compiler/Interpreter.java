@@ -17,7 +17,7 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
 				execute(statement);
 			}
 		} catch (RuntimeError error) {
-			RoundTable.runtimeError(error);
+			ErrorHandler.runtimeError(error);
 		}
 	}
 
@@ -82,13 +82,6 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
 		} else if (stmt.elseBranch != null) {
 			execute(stmt.elseBranch);
 		}
-		return null;
-	}
-
-	@Override
-	public Void visitPrintStmt(Stmt.Print stmt) {
-		Object value = evaluate(stmt.expression);
-		System.out.println(stringify(value));
 		return null;
 	}
 
@@ -406,7 +399,7 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
 		globals.define("print", new RoundTableCallable() {
 			@Override
 			public int arity() {
-				return 2;
+				return 1;
 			}
 
 			@Override

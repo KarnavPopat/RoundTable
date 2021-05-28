@@ -8,10 +8,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.List;
 
-/* TODO: add error handling functions to display
-    erroneous lines, tracebacks, line positions, and the type of error */
-/* TODO: create a separate error_reporter class or interface
-    to handle errors */
+/* TODO: add error handling functions to display erroneous lines */
 /* TODO: turn print statement into print function */
 /* TODO: implement ternary operators */
 /* TODO: allow hexadec, oct, and sci notation numbers */
@@ -24,9 +21,6 @@ import java.util.List;
 public class RoundTable {
 
 	private static final Interpreter interpreter = new Interpreter();
-
-	static boolean hadError = false;
-	static boolean hadRuntimeError = false;
 
 	public static void main(String[] args) throws IOException {
 
@@ -45,8 +39,8 @@ public class RoundTable {
 		run(new String(bytes, Charset.defaultCharset()));
 
 		// Indicate an error in the exit code.
-		if (hadError) System.exit(65);
-		if (hadRuntimeError) System.exit(70);
+		if (ErrorHandler.hadError) System.exit(65);
+		if (ErrorHandler.hadRuntimeError) System.exit(70);
 	}
 
 	private static void runPrompt() throws IOException {
@@ -60,7 +54,7 @@ public class RoundTable {
 				break;
 			}
 			run(line);
-			hadError = false;
+			ErrorHandler.hadError = false;
 		}
 	}
 
@@ -75,40 +69,16 @@ public class RoundTable {
 		List<Stmt> statements = parser.parse();
 
 		// Stop if there was a syntax error.
-		if (hadError) return;
+		if (ErrorHandler.hadError) return;
 
 		// Resolve errors with the resolver
 		Resolver resolver = new Resolver(interpreter);
 		resolver.resolve(statements);
 
 		// Stop if there was a resolution error.
-		if (hadError) return;
+		if (ErrorHandler.hadError) return;
 
 		// Interpret the code with the interpreter (at runtime)
 		interpreter.interpret(statements);
-	}
-
-	private static void report(int line, String where, String message) {
-		System.err.println(
-				"[line " + line + "] Error" + where + ": " + message);
-		hadError = true;
-	}
-
-	static void error(Token token, String message) {
-		if (token.type == TokenType.EOF) {
-			report(token.line, " at end", message);
-		} else {
-			report(token.line, " at '" + token.lexeme + "'", message);
-		}
-	}
-
-	static void error(int line, String message) {
-		report(line, "", message);
-	}
-
-	static void runtimeError(RuntimeError error) {
-		System.err.println(error.getMessage() +
-				"\n[line " + error.token.line + "]");
-		hadRuntimeError = true;
 	}
 }

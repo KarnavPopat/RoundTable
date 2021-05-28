@@ -157,7 +157,6 @@ class Parser {
 	private Stmt statement() {
 		if (match(FOR)) return forStatement();
 		if (match(IF)) return ifStatement();
-		if (match(PRINT)) return printStatement();
 		if (match(RETURN)) return returnStatement();
 		if (match(WHILE)) return whileStatement();
 		if (match(LEFT_BRACE)) return new Stmt.Block(block());
@@ -220,13 +219,6 @@ class Parser {
 		}
 
 		return new Stmt.If(condition, thenBranch, elseBranch);
-	}
-
-
-	private Stmt printStatement() {
-		Expr value = expression();
-		consume(SEMICOLON, "Expect ';' after value.");
-		return new Stmt.Print(value);
 	}
 
 	private Stmt returnStatement() {
@@ -419,7 +411,7 @@ class Parser {
 	}
 
 	private ParseError error(Token token, String message) {
-		RoundTable.error(token, message);
+		ErrorHandler.error(token, message);
 		return new ParseError();
 	}
 
@@ -436,7 +428,6 @@ class Parser {
 				case FOR:
 				case IF:
 				case WHILE:
-				case PRINT:
 				case RETURN:
 					return;
 			}

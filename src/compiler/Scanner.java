@@ -29,7 +29,6 @@ class Scanner {
 		keywords.put("if",     IF);
 		keywords.put("nil",    NIL);
 		keywords.put("or",     OR);
-		keywords.put("print",  PRINT);
 		keywords.put("return", RETURN);
 		keywords.put("super",  SUPER);
 		keywords.put("self",   SELF);
@@ -119,7 +118,7 @@ class Scanner {
 				} else if (isAlpha(c)) {
 					identifier();
 				} else {
-					RoundTable.error(line, "Unexpected character.");
+					ErrorHandler.error(line, "Unexpected character.");
 				}
 
 		}
@@ -182,7 +181,7 @@ class Scanner {
 		}
 
 		if (isAtEnd()) {
-			RoundTable.error(line, "Unterminated string.");
+			ErrorHandler.error(line, "Unterminated string.");
 			return;
 		}
 
